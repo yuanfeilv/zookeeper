@@ -519,6 +519,7 @@ public class QuorumCnxManager {
                     new BufferedInputStream(sock.getInputStream()));
 
             LOG.debug("Sync handling of connection request received from: {}", sock.getRemoteSocketAddress());
+            // 处理连接信息
             handleConnection(sock, din);
         } catch (IOException e) {
             LOG.error("Exception handling connection, addr: {}, closing server connection",
@@ -942,6 +943,7 @@ public class QuorumCnxManager {
                             if (quorumSaslAuthEnabled) {
                                 receiveConnectionAsync(client);
                             } else {
+                                // 接收连接
                                 receiveConnection(client);
                             }
                             numRetries = 0;

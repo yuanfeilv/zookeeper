@@ -79,6 +79,7 @@ public class QuorumPeerMain {
     public static void main(String[] args) {
         QuorumPeerMain main = new QuorumPeerMain();
         try {
+            // 服务端启动入口
             main.initializeAndRun(args);
         } catch (IllegalArgumentException e) {
             LOG.error("Invalid arguments, exiting abnormally", e);
@@ -108,18 +109,21 @@ public class QuorumPeerMain {
     protected void initializeAndRun(String[] args)
         throws ConfigException, IOException, AdminServerException
     {
+        // 解析配置文件
         QuorumPeerConfig config = new QuorumPeerConfig();
         if (args.length == 1) {
             config.parse(args[0]);
         }
 
         // Start and schedule the the purge task
+        // 清理快照文件
         DatadirCleanupManager purgeMgr = new DatadirCleanupManager(config
                 .getDataDir(), config.getDataLogDir(), config
                 .getSnapRetainCount(), config.getPurgeInterval());
         purgeMgr.start();
 
         if (args.length == 1 && config.isDistributed()) {
+            // 启动逻辑
             runFromConfig(config);
         } else {
             LOG.warn("Either no config or no quorum defined in config, running "
@@ -132,6 +136,7 @@ public class QuorumPeerMain {
     public void runFromConfig(QuorumPeerConfig config)
             throws IOException, AdminServerException
     {
+        // 日志相关
       try {
           ManagedUtil.registerLog4jMBeans();
       } catch (JMException e) {
@@ -144,6 +149,7 @@ public class QuorumPeerMain {
           ServerCnxnFactory secureCnxnFactory = null;
 
           if (config.getClientPortAddress() != null) {
+              // 初始化netty 线程组
               cnxnFactory = ServerCnxnFactory.createFactory();
               cnxnFactory.configure(config.getClientPortAddress(),
                       config.getMaxClientCnxns(),
@@ -156,6 +162,7 @@ public class QuorumPeerMain {
                       config.getMaxClientCnxns(),
                       true);
           }
+          //获取本服务的节点
 
           quorumPeer = getQuorumPeer();
           quorumPeer.setTxnFactory(new FileTxnSnapLog(
@@ -165,6 +172,7 @@ public class QuorumPeerMain {
           quorumPeer.enableLocalSessionsUpgrading(
               config.isLocalSessionsUpgradingEnabled());
           //quorumPeer.setQuorumPeers(config.getAllMembers());
+          // 设置选举类型，默认是3
           quorumPeer.setElectionType(config.getElectionAlg());
           quorumPeer.setMyid(config.getServerId());
           quorumPeer.setTickTime(config.getTickTime());
@@ -173,12 +181,14 @@ public class QuorumPeerMain {
           quorumPeer.setInitLimit(config.getInitLimit());
           quorumPeer.setSyncLimit(config.getSyncLimit());
           quorumPeer.setConfigFileName(config.getConfigFilename());
+          // 设置持久化的Database
           quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
           quorumPeer.setQuorumVerifier(config.getQuorumVerifier(), false);
           if (config.getLastSeenQuorumVerifier()!=null) {
               quorumPeer.setLastSeenQuorumVerifier(config.getLastSeenQuorumVerifier(), false);
           }
           quorumPeer.initConfigInZKDatabase();
+          // 设置初始化连接对象
           quorumPeer.setCnxnFactory(cnxnFactory);
           quorumPeer.setSecureCnxnFactory(secureCnxnFactory);
           quorumPeer.setSslQuorum(config.isSslQuorum());
@@ -199,9 +209,10 @@ public class QuorumPeerMain {
               quorumPeer.setQuorumServerLoginContext(config.quorumServerLoginContext);
               quorumPeer.setQuorumLearnerLoginContext(config.quorumLearnerLoginContext);
           }
+
           quorumPeer.setQuorumCnxnThreadsSize(config.quorumCnxnThreadsSize);
           quorumPeer.initialize();
-          
+          // 启动服务节点
           quorumPeer.start();
           quorumPeer.join();
       } catch (InterruptedException e) {
